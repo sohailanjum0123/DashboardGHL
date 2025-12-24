@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS Variables */
+:root {
+  --color-primary: 37 99 235;      
+  --color-secondary: 99 102 241;  
+  --color-bg: 191 219 254;   
+  --color-text: 15 23 42;         
+  --font-base: 'Inter', sans-serif;
+}
