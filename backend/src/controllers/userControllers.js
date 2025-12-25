@@ -4,6 +4,10 @@ import { User } from "../models/userModel.js";
 import { uploadOnCloudinary } from "../Service/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { sendEmail } from "../utils/sendEmail.js";
+
+
 const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -55,7 +59,9 @@ const registerUser = asyncHnadler(async (req, res) => {
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  const coverImage = coverImageLocalPath
+    ? await uploadOnCloudinary(coverImageLocalPath)
+    : null;
 
   if (!avatar) {
     throw new apiError(400, "avatar image is required");
@@ -70,9 +76,19 @@ const registerUser = asyncHnadler(async (req, res) => {
     coverImage: coverImage?.url || "",
   });
 
+  // ✅ AUTO LOGIN
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    user._id
+  );
+
   const createdUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
+  const options = {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+  };
 
   if (!createdUser) {
     throw new apiError(500, "something wrong by Server registering the user");
@@ -80,7 +96,15 @@ const registerUser = asyncHnadler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new apiResponse(200, createdUser, "User Register Successfully"));
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new apiResponse(
+        201,
+        { accessToken, refreshToken, user: createdUser },
+        "User registered & logged in"
+      )
+    );
 });
 
 const loginUser = asyncHnadler(async (req, res) => {
@@ -226,28 +250,188 @@ const searchUser = asyncHnadler(async (req, res) => {
   }
 });
 
-
-
 const getUsers = asyncHnadler(async (req, res) => {
   try {
     const users = await User.find({})
       .select("-password -refreshToken")
       .sort({ createdAt: -1 });
 
-    return res.status(200).json(
-      new apiResponse(
-        200,
-        users,
-        "Users fetched successfully"
-      )
-    );
+    return res
+      .status(200)
+      .json(new apiResponse(200, users, "Users fetched successfully"));
   } catch (error) {
-    throw new apiError(
-      500,
-      `Getting users server error: ${error.message}`
-    );
+    throw new apiError(500, `Getting users server error: ${error.message}`);
   }
 });
 
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, searchUser, getUsers };
+
+// Update user
+const updateUser = asyncHnadler(async (req, res) => {
+  const { id } = req.params;
+
+  // Only allow the user himself or admin
+  if (req.user.role !== "admin" && req.user._id.toString() !== id) {
+    throw new apiError(403, "You are not authorized to update this user");
+  }
+
+  const { fullName, userName, email } = req.body;
+
+  if (email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new apiError(400, "Invalid email format.");
+    }
+  }
+
+  // Handle avatar or coverImage if uploaded
+  let updateData = { fullName, userName, email };
+  if (req.files?.avatar) {
+    const avatar = await uploadOnCloudinary(req.files.avatar[0].path);
+    updateData.avatar = avatar.url;
+  }
+  if (req.files?.coverImage) {
+    const coverImage = await uploadOnCloudinary(req.files.coverImage[0].path);
+    updateData.coverImage = coverImage.url;
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    id,
+    updateData,
+    { new: true, runValidators: true }
+  ).select("-password -refreshToken");
+
+  if (!updatedUser) {
+    throw new apiError(404, "User not found");
+  }
+
+  return res.status(200).json(new apiResponse(200, updatedUser, "User updated successfully"));
+});
+
+const deleteUser = asyncHnadler(async (req, res) => {
+  const { id } = req.params;
+
+  // Only admin can delete
+  if (req.user.role !== "admin") {
+    throw new apiError(403, "You are not authorized to delete users");
+  }
+
+  const user = await User.findByIdAndDelete(id);
+
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+
+  return res.status(200).json(new apiResponse(200, {}, "User deleted successfully"));
+});
+
+const getUserDetail = asyncHnadler(async (req, res) => {
+  const { id } = req.params;
+
+  if (req.user.role !== "admin" && req.user._id.toString() !== id) {
+    throw new apiError(403, "You are not authorized to view this user");
+  }
+
+  const user = await User.findById(id).select("-password -refreshToken");
+
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+
+  return res.status(200).json(new apiResponse(200, user, "User details fetched successfully"));
+});
+
+
+
+
+const requestPasswordReset = asyncHnadler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new apiError(400, "Email is required");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new apiError(404, "User not found");
+  }
+
+  // Generate raw token
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  // Hash token before saving (SECURITY)
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  user.resetPasswordToken = hashedToken;
+  user.resetPasswordExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
+
+  await user.save({ validateBeforeSave: false });
+
+  const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+  await sendEmail({
+    to: user.email,
+    subject: "Password Reset Request",
+    text: `You requested a password reset.\n\nClick the link below:\n${resetURL}\n\nThis link will expire in 30 minutes.`,
+  });
+
+  return res.status(200).json(
+    new apiResponse(200, {}, "Password reset link sent to your email")
+  );
+});
+
+
+
+const resetPassword = asyncHnadler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    throw new apiError(400, "Password is required");
+  }
+
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    throw new apiError(400, "Invalid or expired reset token");
+  }
+
+  // Update password (bcrypt hook will run)
+  user.password = password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+
+  await user.save();
+
+  return res.status(200).json(
+    new apiResponse(200, {}, "Password reset successfully")
+  );
+});
+
+
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  searchUser,
+  getUsers,
+  updateUser,
+  deleteUser,
+  getUserDetail,
+  requestPasswordReset ,
+  resetPassword 
+
+};

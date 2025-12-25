@@ -8,7 +8,6 @@ export default function Login() {
 
   const onSubmit = async (data) => {
     try {
-      // Call login API
       const res = await loginUser({
         email: data.email,
         password: data.password,
@@ -16,10 +15,8 @@ export default function Login() {
 
       const user = res.data.data.user;
 
-      // Store user in localStorage
       localStorage.setItem("user", JSON.stringify(user));
 
-      // Role-based redirect
       if (user.role === "admin") {
         navigate("/dashboard");
       } else {
@@ -56,6 +53,10 @@ export default function Login() {
         <button type="submit" className="w-full bg-primary text-white py-2 rounded hover:bg-primary/80 transition">
           Login
         </button>
+
+        <p className="mt-2 text-right text-sm text-primary cursor-pointer" onClick={() => navigate("/forgot-password")}>
+          Forgot Password?
+        </p>
 
         <p className="mt-4 text-center text-sm text-text">
           Don't have an account?{" "}

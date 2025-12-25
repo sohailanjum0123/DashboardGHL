@@ -6,23 +6,30 @@ export default function Signup() {
   const navigate = useNavigate();
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
-  const onSubmit = async (data) => {
-    try {
-      const formData = new FormData();
-      formData.append("fullName", data.fullName);
-      formData.append("userName", data.userName);
-      formData.append("email", data.email);
-      formData.append("password", data.password);
-      formData.append("avatar", data.avatar[0]);
-      if (data.coverImage?.length) formData.append("coverImage", data.coverImage[0]);
+const onSubmit = async (data) => {
+  try {
+    const formData = new FormData();
+    formData.append("fullName", data.fullName);
+    formData.append("userName", data.userName);
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+    formData.append("avatar", data.avatar[0]);
 
-      await registerUser(formData);
-      navigate("/dashboard");
-    } catch (error) {
-      console.log("ERRRRRRRR",error)
-      alert(error.response?.data?.message || "Signup failed");
+    if (data.coverImage?.length) {
+      formData.append("coverImage", data.coverImage[0]);
     }
-  };
+
+    const res = await registerUser(formData);
+    // ✅ AUTO LOGIN
+    localStorage.setItem("token", res.data?.data?.accessToken);
+    localStorage.setItem("user", JSON.stringify(res.data?.data?.user));
+
+    navigate("/dashboard");
+  } catch (error) {
+    alert(error.response?.data?.message || "Signup failed");
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg">
@@ -80,7 +87,7 @@ export default function Signup() {
 
         <p className="mt-4 text-center text-sm text-text">
           Already have an account?{" "}
-          <span className="text-primary cursor-pointer" onClick={() => navigate("/")}>
+          <span className="text-primary cursor-pointer" onClick={() => navigate("/login")}>
             Login
           </span>
         </p>

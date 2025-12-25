@@ -4,7 +4,7 @@ import { logoutUser } from "../services/api";
 import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
 
-export default function Dashboard() {
+export default function adminDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
@@ -43,12 +43,6 @@ export default function Dashboard() {
           <h1 className="text-4xl font-bold text-primary mb-4">
             Welcome {user?.fullName}
           </h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
         </div>
       </div>
     </div>

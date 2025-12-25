@@ -40,12 +40,6 @@ export default function ProductsDashboard() {
             Welcome {user?.fullName || "User"}
           </h1>
           <h2 className="text-2xl text-gray-700">Products Dashboard</h2>
-          <button
-            onClick={handleLogout}
-            className="mt-4 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
         </div>
       </div>
     </div>
