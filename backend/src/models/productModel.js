@@ -46,8 +46,8 @@ const productSchema = new Schema(
       },
     },
     {
-      timestamps: true, // Automatically adds createdAt and updatedAt fields
-      versionKey: false, // Removes the __v field
+      timestamps: true, 
+      versionKey: false, 
     }
   );
 

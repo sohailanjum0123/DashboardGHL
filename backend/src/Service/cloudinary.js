@@ -12,22 +12,20 @@ const uploadOnCloudinary = async (localFilePath)=>{
     try {
         if(!localFilePath) return null;
 
-            // Decide resource_type based on file extension
     const isCsv = localFilePath.toLowerCase().endsWith(".csv");
     const resourceType = isCsv ? "raw" : "auto";
 
-        //upload the file on cloudinary
        const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: resourceType,
-      folder: isCsv ? "csv_uploads" : "images_uploads", // keep things organized
+      folder: isCsv ? "csv_uploads" : "images_uploads", 
       use_filename: true,
       unique_filename: false,
         })
-        //file has been uploaded successfully
+
         console.log("file is uploaded on cloudinary",response.url)
         return response;
     } catch (error) {
-        // cleanup if failed
+
     if (fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
     }

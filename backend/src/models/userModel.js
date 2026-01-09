@@ -44,7 +44,6 @@ const userSchema = new Schema(
       enum: ["user", "admin"],
       default: "user",    
     },
-     // ====== Password Reset Fields ======
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },

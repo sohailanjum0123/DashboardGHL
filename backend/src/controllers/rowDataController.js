@@ -10,7 +10,6 @@ export const uploadCsv = async (req, res) => {
   const filePath = req.file.path;
 
   try {
-    // 1. Upload CSV to Cloudinary
     const cloudinaryRes = await uploadOnCloudinary(filePath);
     if (!cloudinaryRes) {
       return res.status(500).json({ error: "CSV upload to Cloudinary failed" });

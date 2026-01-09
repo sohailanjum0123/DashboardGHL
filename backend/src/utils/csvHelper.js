@@ -4,10 +4,8 @@ export const sanitizeRow= (row) => {
     const cleanKey = key.trim();
     const raw = (row[key] ?? '').toString().trim();
 
-    // Prevent CSV injection (Excel/Sheets formula injection)
     const safe = raw.replace(/^([=+\-@])/, "'$1");
 
-    // Convert types
     if (safe === '') out[cleanKey] = null;
     else if (!isNaN(safe) && safe.length < 16) out[cleanKey] = Number(safe);
     else if (['true', 'false'].includes(safe.toLowerCase())) out[cleanKey] = safe.toLowerCase() === 'true';

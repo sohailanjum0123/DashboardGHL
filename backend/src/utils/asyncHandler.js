@@ -1,10 +1,7 @@
 const asyncHnadler  = (requestHandler) => {
   return (req, res, next) => {
-    // Wrap the handler in a Promise and catch any errors
     Promise.resolve(requestHandler(req, res, next)).catch((err) => {
      
-     
-      // Handle specific errors
       if (err.name === 'CastError') {
         return res.status(400).json({ error: 'Invalid ID format' });
       }
@@ -23,7 +20,6 @@ const asyncHnadler  = (requestHandler) => {
         });
       }
 
-      // Pass other errors to the default error handler
       next(err);
     });
   };

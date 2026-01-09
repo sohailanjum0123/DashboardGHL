@@ -14,7 +14,7 @@ export const upload = multer({
 })
 
 
-// File filter to allow only CSV
+
 function csvFileFilter(req, file, cb) {
   const ext = path.extname(file.originalname).toLowerCase();
   const isCsv = file.mimetype === "text/csv" || ext === ".csv";
@@ -27,10 +27,9 @@ function csvFileFilter(req, file, cb) {
   }
 }
 
-// Multer upload instance
 export const csvUpload = multer({
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // optional: 50MB
+  limits: { fileSize: 50 * 1024 * 1024 }, 
   fileFilter: csvFileFilter,
 });
 

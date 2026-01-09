@@ -76,7 +76,6 @@ const registerUser = asyncHnadler(async (req, res) => {
     coverImage: coverImage?.url || "",
   });
 
-  // ✅ AUTO LOGIN
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     user._id
   );
@@ -169,8 +168,8 @@ const logoutUser = asyncHnadler(async (req, res) => {
 
   const options = {
     httpOnly: true,
-    secure: false, // false for local dev, true for production HTTPS
-    sameSite: "lax", // allows cross-origin cookies in dev
+    secure: false, 
+    sameSite: "lax", 
   };
 
   return res
@@ -266,11 +265,10 @@ const getUsers = asyncHnadler(async (req, res) => {
 
 
 
-// Update user
 const updateUser = asyncHnadler(async (req, res) => {
   const { id } = req.params;
 
-  // Only allow the user himself or admin
+
   if (req.user.role !== "admin" && req.user._id.toString() !== id) {
     throw new apiError(403, "You are not authorized to update this user");
   }
@@ -284,7 +282,7 @@ const updateUser = asyncHnadler(async (req, res) => {
     }
   }
 
-  // Handle avatar or coverImage if uploaded
+
   let updateData = { fullName, userName, email };
   if (req.files?.avatar) {
     const avatar = await uploadOnCloudinary(req.files.avatar[0].path);
@@ -311,7 +309,6 @@ const updateUser = asyncHnadler(async (req, res) => {
 const deleteUser = asyncHnadler(async (req, res) => {
   const { id } = req.params;
 
-  // Only admin can delete
   if (req.user.role !== "admin") {
     throw new apiError(403, "You are not authorized to delete users");
   }
@@ -356,17 +353,15 @@ const requestPasswordReset = asyncHnadler(async (req, res) => {
     throw new apiError(404, "User not found");
   }
 
-  // Generate raw token
   const resetToken = crypto.randomBytes(32).toString("hex");
 
-  // Hash token before saving (SECURITY)
   const hashedToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
 
   user.resetPasswordToken = hashedToken;
-  user.resetPasswordExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
+  user.resetPasswordExpires = Date.now() + 30 * 60 * 1000; 
 
   await user.save({ validateBeforeSave: false });
 

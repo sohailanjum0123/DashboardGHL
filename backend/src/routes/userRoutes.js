@@ -44,6 +44,8 @@ router
   .route("/user/:id")
   .get(verifyJWT, getUserDetail)
   .put(
+
+    
     verifyJWT,
     upload.fields([
       { name: "avatar", maxCount: 1 },
